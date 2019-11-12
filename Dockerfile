@@ -1,9 +1,11 @@
-FROM composer/composer:php5.6 as vendor
+FROM composer/composer:php7 as vendor
+
 
 WORKDIR /tmp/
 
 COPY composer.json composer.json
 COPY composer.lock composer.lock
+
 
 RUN composer install \
     --ignore-platform-reqs \
@@ -12,7 +14,8 @@ RUN composer install \
     --no-scripts \
     --prefer-dist
 
-FROM php:5.6-apache-stretch
+
+FROM php:7.2-apache-stretch
 
 COPY . /var/www/html
 COPY --from=vendor /tmp/vendor/ /var/www/html/vendor/
