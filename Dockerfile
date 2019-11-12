@@ -1,75 +1,50 @@
 FROM php:5.6
 # Install dev dependencies
-RUN apk add --no-cache --virtual .build-deps \
-    $PHPIZE_DEPS \
-    curl-dev \
-    imagemagick-dev \
-    libtool \
-    libxml2-dev \
-    postgresql-dev \
-    sqlite-dev
+COPY composer.lock composer.json /var/www/html/
 
-# Install production dependencies
-RUN apk add --no-cache \
-    bash \
-    curl \
-    g++ \
-    gcc \
-    git \
-    imagemagick \
-    libc-dev \
-    libpng-dev \
-    make \
-    mysql-client \
-    nodejs \
-    nodejs-npm \
-    yarn \
-    openssh-client \
-    postgresql-libs \
-    rsync \
-    zlib-dev \
-    libzip-dev
+# Set working directory
+WORKDIR /var/www/html
 
-# Install PECL and PEAR extensions
-RUN pecl install \
-    imagick \
-    xdebug
+# Install Additional dependencies
+RUN apk update && apk add --no-cache \
+    build-base shadow vim curl \
+    php7 \
+    php7-fpm \
+    php7-common \
+    php7-pdo \
+    php7-pdo_mysql \
+    php7-mysqli \
+    php7-mcrypt \
+    php7-mbstring \
+    php7-xml \
+    php7-openssl \
+    php7-json \
+    php7-phar \
+    php7-zip \
+    php7-gd \
+    php7-dom \
+    php7-session \
+    php7-zlib
 
-# Install and enable php extensions
-RUN docker-php-ext-enable \
-    imagick \
-    xdebug
-RUN docker-php-ext-configure zip --with-libzip
-RUN docker-php-ext-install \
-    curl \
-    exif \
-    iconv \
-    mbstring \
-    pdo \
-    pdo_mysql \
-    pdo_pgsql \
-    pdo_sqlite \
-    pcntl \
-    tokenizer \
-    xml \
-    gd \
-    zip \
-    bcmath
+# Add and Enable PHP-PDO Extenstions
+RUN docker-php-ext-install pdo pdo_mysql
+RUN docker-php-ext-enable pdo_mysql
 
-# Install composer
-ENV COMPOSER_HOME /composer
-ENV PATH ./vendor/bin:/composer/vendor/bin:$PATH
-ENV COMPOSER_ALLOW_SUPERUSER 1
-RUN curl -s https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin/ --filename=composer
+# Install PHP Composer
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Install PHP_CodeSniffer
-RUN composer global require "squizlabs/php_codesniffer=*"
+# Remove Cache
+RUN rm -rf /var/cache/apk/*
 
-# Cleanup dev dependencies
-RUN apk del -f .build-deps
+# Add UID '1000' to www-data
+RUN usermod -u 1000 www-data
 
-# Setup working directory
-WORKDIR /var/www
+# Copy existing application directory permissions
+COPY --chown=www-data:www-data . /var/www/html
 
-CMD php artisan serve --host=0.0.0.0 --port=8181
-EXPOSE 8181
+# Change current user to www
+USER www-data
+
+# Expose port 9000 and start php-fpm server
+EXPOSE 9000
+CMD ["php-fpm"]
