@@ -1,21 +1,10 @@
-FROM composer/composer:php7 as vendor
+FROM php:5.6
+RUN apt-get update -y && apt-get install -y openssl zip unzip git
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN docker-php-ext-install pdo mbstring
+WORKDIR /app
+COPY . /app
+RUN composer install
 
-
-WORKDIR /tmp/
-
-COPY composer.json composer.json
-COPY composer.lock composer.lock
-
-
-RUN composer install \
-    --ignore-platform-reqs \
-    --no-interaction \
-    --no-plugins \
-    --no-scripts \
-    --prefer-dist
-
-
-FROM php:7.2-apache-stretch
-
-COPY . /var/www/html
-COPY --from=vendor /tmp/vendor/ /var/www/html/vendor/
+CMD php artisan serve --host=0.0.0.0 --port=8181
+EXPOSE 8181
